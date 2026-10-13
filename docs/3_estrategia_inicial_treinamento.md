@@ -2,7 +2,52 @@
 
 Data: 29/09/2026
 
-Status: estratégia inicial aprovada, sujeita a revisão com base nos resultados de validação.
+Status: estratégia atualizada em 13/10/2026, após a análise de UFPR e RodoSol e confirmação de Igor. O treinamento anterior foi cancelado. A próxima etapa é preparar os dados e treinar primeiro o detector.
+
+## Decisão de 13/10/2026: uso dos dois datasets
+
+Manter as divisões oficiais de ambos os datasets: 40% treino, 20% validação e 40% teste. A alternativa 70/15/15 não foi adotada. Não redistribuir imagens, tracks ou placas nesta preparação.
+
+| Origem | Treino | Validação | Teste | Total |
+|---|---:|---:|---:|---:|
+| UFPR | 1.800 | 900 | 1.800 | 4.500 |
+| RodoSol | 8.000 | 4.000 | 8.000 | 20.000 |
+| Ambos | 9.800 | 4.900 | 9.800 | 24.500 |
+
+Comparar três experimentos do detector, todos iniciados dos mesmos pesos pré-treinados, sem continuar os pesos de um experimento no outro:
+
+1. Treinar apenas com o treino UFPR.
+2. Treinar apenas com o treino RodoSol.
+3. Treinar com a união dos dois treinos, inicialmente na proporção natural dos dados.
+
+Avaliar cada candidato nas duas validações, apresentando resultados separados por origem. A validação concatenada do YAML combinado é auxiliar: sua média não substitui a avaliação de cada dataset. Cerca de 82% das imagens de treino combinado vêm do RodoSol. Não adotar reamostragem 50/50 sem evidência experimental.
+
+Manter comparáveis a configuração inicial e os critérios de seleção; registrar semente, versões, resolução, batch, épocas efetivas, passos de otimização e tempo. Mesmas épocas não equivalem a mesmo custo quando o tamanho dos dados difere. Confirmar os parâmetros e o critério de escolha do checkpoint antes de executar os treinos; esta decisão não fixa esses valores.
+
+Usar a validação para escolher parâmetros e configurações. Reservar os testes para a avaliação final do protocolo definido, com resultados separados por dataset e pelos grupos pertinentes (tipo, layout anotado e tamanho de placa). Não considerar o resultado agregado suficiente para escolher o melhor sistema.
+
+### Limitações conhecidas e avaliações complementares
+
+- UFPR: AVA1466 e BBO8514 aparecem no treino e teste. Preservar o protocolo e apresentar também resultado sem os tracks de teste dessas placas, conforme detalhado adiante. Há um par de imagens idênticas dentro da validação (`track0090[14]` e `[15]`); declarar essa repetição e, na avaliação complementar, contar a imagem duplicada uma única vez.
+- RodoSol: HDE1F59 aparece em três imagens de treino e três de validação. Preservar os arquivos oficiais, mas apresentar também validação sem essas três imagens e usar esse resultado complementar para orientar escolhas. O filtro é de avaliação, não uma alteração do dataset oficial. O YAML padrão continua apontando para a validação completa.
+- Examinar candidatos a semelhança entre divisões antes do treinamento. Igualdade de dHash não confirma duplicação e não autoriza excluir imagens automaticamente.
+- No RodoSol, algumas cenas contêm placas adicionais visíveis sem anotação. Ainda é necessário definir se o sistema deve encontrar a placa do veículo principal ou todas as placas visíveis; a conversão preserva somente o alvo anotado, sem inventar labels.
+- A definição do cenário final de uso permanece em aberto. Uma mistura de datasets não garante generalização para uma câmera ou ambiente novo.
+
+### Preparação YOLO aprovada
+
+Usar dois notebooks independentes, sem módulos auxiliares ou relatórios adicionais:
+
+- `src/preparacao_yolo_UFPR.ipynb`: preservar as divisões e tracks de `datasets_brutos/UFPR-ALPR dataset`; preparar `datasets_yolo/UFPR`.
+- `src/preparacao_yolo_RodoSol.ipynb`: seguir exatamente `split.txt` de `datasets_brutos/tbFcZE-RodoSol-ALPR`; preparar `datasets_yolo/RodoSol`.
+
+Cada dataset terá `images/<divisão>/<grupo>/...`, `labels/<divisão>/<grupo>/...` e `dataset.yaml`. O grupo é o track no UFPR e a pasta de tipo/layout no RodoSol. Manter imagens originais sem redimensionar e sem mover ou alterar os brutos. Usar dimensões reais, inclusive as 61 imagens UFPR com altura 1088.
+
+Uma única classe, `0: placa`, representa todos os layouts e tipos de veículo. Converter os quatro cantos para a caixa alinhada aos eixos e normalizar centro, largura e altura pelas dimensões da imagem. O texto da placa não é alvo do detector. Não corrigir silenciosamente anotações inválidas: interromper e informar os arquivos envolvidos.
+
+O notebook RodoSol também gera `datasets_yolo/combinado.yaml`, referenciando as pastas das duas origens, sem copiar novamente as imagens. Executar primeiro o notebook UFPR. Os YAMLs individuais e o combinado usam caminhos absolutos calculados a partir do projeto; ao mover o projeto, executar novamente os notebooks para atualizar esses caminhos.
+
+Verificar pares, totais por divisão, correspondência das imagens copiadas e caixas YOLO contra as anotações originais. Mostrar exemplos visuais nos próprios notebooks. A preparação não executa treinamento nem altera os notebooks de análise.
 
 ## Objetivo
 
